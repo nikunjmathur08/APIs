@@ -188,6 +188,13 @@ struct Location: Codable {
 enum NetworkError: Error {
     case invalidURL
     case invalidResponse
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL: return "The URL provided was invalid"
+        case .invalidResponse: return "Server returned an invalid response"
+        }
+    }
 }
 
 func fetchCharacterResponse(page: Int) async throws -> CharacterResponse {
