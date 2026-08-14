@@ -13,7 +13,8 @@ struct APIsApp: App {
         WindowGroup {
 //            ContentView()
 //            TypiCodeGetView()
-            TypiCodePostView()
+//            TypiCodePostView()
+            TypiCodePutView()
         }
     }
 }
