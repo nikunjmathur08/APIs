@@ -14,7 +14,8 @@ struct APIsApp: App {
 //            ContentView()
 //            TypiCodeGetView()
 //            TypiCodePostView()
-            TypiCodePutView()
+//            TypiCodePutView()
+            TypiCodeDelete()
         }
     }
 }
