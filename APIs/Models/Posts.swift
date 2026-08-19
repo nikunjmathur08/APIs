@@ -47,3 +47,8 @@ struct PutResponse: Codable, Identifiable {
     var body: String
     var userId: Int
 }
+
+enum NetworkError: Error {
+    case invalidURL
+    case invalidResponse
+}

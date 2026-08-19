@@ -11,11 +11,7 @@ import SwiftUI
 struct APIsApp: App {
     var body: some Scene {
         WindowGroup {
-//            ContentView()
-//            TypiCodeGetView()
-//            TypiCodePostView()
-//            TypiCodePutView()
-            TypiCodeDeleteView()
+            ContentView()
         }
     }
 }
