@@ -9,13 +9,12 @@ import Foundation
 import SwiftUI
 
 struct TypiCodePostView: View {
-    @State private var title: String = ""
-    @State private var postBody: String = ""
-    @State private var apiState: APIState = .idle
+    @State private var viewModel = TypiCodePostViewModel()
+    
     
     private var isFormInvalid: Bool {
-        title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        postBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        viewModel.postBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     var body: some View {
@@ -28,7 +27,7 @@ struct TypiCodePostView: View {
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
-                        TextEditor(text: $title)
+                        TextEditor(text: $viewModel.title)
                             .frame(height: 44)
                             .padding(8)
                             .background(Color(.systemGray6))
@@ -38,11 +37,11 @@ struct TypiCodePostView: View {
                                     .foregroundColor(.gray)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 16)
-                                    .opacity(title.isEmpty ? 1 : 0),
+                                    .opacity(viewModel.title.isEmpty ? 1 : 0),
                                 alignment: .topLeading
                             )
                         
-                        TextEditor(text: $postBody)
+                        TextEditor(text: $viewModel.postBody)
                             .frame(height: 120)
                             .padding(8)
                             .background(Color(.systemGray6))
@@ -52,7 +51,7 @@ struct TypiCodePostView: View {
                                     .foregroundColor(.gray)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 16)
-                                    .opacity(postBody.isEmpty ? 1 : 0),
+                                    .opacity(viewModel.postBody.isEmpty ? 1 : 0),
                                 alignment: .topLeading
                             )
                     }
@@ -63,7 +62,7 @@ struct TypiCodePostView: View {
                     
                     Button(action: handlePostSubmit) {
                         HStack {
-                            if case .loading = apiState {
+                            if case .loading = viewModel.apiState {
                                 ProgressView()
                                     .tint(.white)
                                     .padding(.trailing, 8)
@@ -89,18 +88,18 @@ struct TypiCodePostView: View {
     }
     
     private var caseLoadingTitle: String {
-        if case .loading = apiState { return "Posting..." }
+        if case .loading = viewModel.apiState { return "Posting..." }
         return "Submit Post"
     }
     
     private var caseLoadingCheck: Bool {
-        if case .loading = apiState { return true }
+        if case .loading = viewModel.apiState { return true }
         return false
     }
     
     @ViewBuilder
     private var statusView: some View {
-        switch apiState {
+        switch viewModel.apiState {
         case .idle:
             EmptyView()
         case .loading:
@@ -130,7 +129,7 @@ struct TypiCodePostView: View {
             .cornerRadius(12)
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.green.opacity(0.3), lineWidth: 1))
             
-        case .failed(let errorMessage):
+        case .failure(let errorMessage):
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.red)
@@ -152,65 +151,8 @@ struct TypiCodePostView: View {
     }
     
     private func handlePostSubmit() {
-        apiState = .loading
-        
         Task {
-            do {
-                let response = try await uploadNewPost(title: title, body: postBody)
-                await MainActor.run {
-                    self.apiState = .success(response)
-                    self.title = ""
-                    self.postBody = ""
-                }
-            } catch {
-                await MainActor.run {
-                    self.apiState = .failed(error.localizedDescription)
-                }
-            }
+            await viewModel.submit()
         }
     }
-}
-
-struct PostRequest: Codable {
-    let title: String
-    let body: String
-    let userId: Int
-}
-
-struct PostResponse: Codable, Identifiable {
-    let id: Int
-    let title: String
-    let body: String
-    let userId: Int
-}
-
-enum APIState {
-    case idle
-    case loading
-    case success(PostResponse)
-    case failed(String)
-}
-
-func uploadNewPost(title: String, body: String) async throws -> PostResponse {
-    guard let url = URL(string: "https://jsonplaceholder.typicode.com/posts") else {
-        throw NetworkError.invalidURL
-    }
-    
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    
-    request.setValue("application/json; charset=UTF-8", forHTTPHeaderField: "Content-Type")
-    
-    let localPost = PostRequest(title: title, body: body, userId: 1)
-    let encodedData = try JSONEncoder().encode(localPost)
-    
-    request.httpBody = encodedData
-    
-    let (data, response) = try await URLSession.shared.data(for: request)
-    
-    guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-        throw NetworkError.invalidResponse
-    }
-    
-    return try JSONDecoder().decode(PostResponse.self, from: data)
 }
